@@ -8,3 +8,6 @@ add_executable(case_switcher main.cpp)
 #target_link_libraries(case_switcher pthread)
 #add_compile_options(-O3)
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(case_switcher PRIVATE Threads::Threads)

@@ -5,35 +5,39 @@
 #include <fstream>
 #include <algorithm>
 #include <chrono>
+#include <pthread.h>
+
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <sstream>
 
 const size_t NUMBER_OF_THREADS = 4;
 
 using namespace std;
 
+// don't think ternary operator helps, but it looks better for me
 string process_line(string in_line){
-    string out_line=in_line;
-
-    for(size_t i=0; i<out_line.size(); i++){
-        if (isdigit(out_line[i])){
-            int d = out_line[i] -'0';
-            if(d < 9){
-                out_line[i] = '0' + d + 1;
-            }else{
-                out_line[i] = '0';
-            }
-        }else if (isupper(out_line[i])){
-            out_line[i] = tolower(out_line[i]); tolower(out_line[i]);
-        }else{
-            out_line[i] = toupper(out_line[i]);
-        }
+    for(size_t i=0; i<in_line.size(); i++){
+        if (isdigit(in_line[i]))
+            in_line[i] = in_line[i] < 9 ? in_line[i] + 1 : '0';
+        else 
+            in_line[i] = isupper(in_line[i]) ? tolower(in_line[i]) : toupper(in_line[i]);
     }
-
-    return out_line;
+    return in_line;
 }
 
-void process_thread(vector<string>& lines, size_t offset, size_t number_of_threads){
-    for(size_t i=offset; i<lines.size(); i+=number_of_threads){
-        lines[i] = process_line(lines[i]);
+// data for one thread is now in a single chunk
+void process_thread(vector<string>& lines, size_t offset){
+    size_t end = lines.size(),
+        chunk = end / NUMBER_OF_THREADS, 
+        cur = offset * chunk;
+    if(offset < NUMBER_OF_THREADS) 
+        end = cur + chunk;
+
+    for(; cur < end; cur++){
+        lines[cur] = process_line(lines[cur]);
     }
 }
 
@@ -56,14 +60,29 @@ int main() {
         }
         in_file.close();
 
+        // int fd = open("../input.data", O_RDONLY, 0);
+        // struct stat st;
+        // fstat(fd, &st);
+        // unsigned char* data = (unsigned char*)mmap(nullptr, st.st_size,
+        //     PROT_READ,
+        //     MAP_PRIVATE,
+        //     fd, 0);
+        // vector<string> lines;
+        // string buffer;
+        // while(stream >> buffer){
+        //     lines.push_back(buffer+"\n");
+        // }
+        // munmap(carr, st.st_size);
+        // close(fd);
+
         data_load = std::chrono::steady_clock::now();
 
         cout << "Start " << NUMBER_OF_THREADS << " threads" << endl;
         vector<thread> thread_pool;
         for(size_t i=0; i<NUMBER_OF_THREADS; i++){
-         //   thread *th = new thread(process_thread, i);
-          //  thread_pool.push_back(th);
-            thread_pool.emplace_back(process_thread, ref(lines), i ,NUMBER_OF_THREADS);
+            // thread *th = new thread(process_thread, i);
+            // thread_pool.push_back(th);
+            thread_pool.emplace_back(process_thread, ref(lines), i);
         }
 
         cout<<"Wait for finish"<<endl;
@@ -89,3 +108,31 @@ int main() {
     std::cout << "total execution time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "ms" << std::endl;
     return 0;
 }
+
+/* First try:
+    Load input data
+    Start 4 threads
+    Wait for finish
+    Save output data
+    Done
+    data load time: 821ms
+    total execution time: 6631ms
+ * Result:
+    Load input data
+    Start 4 threads
+    Wait for finish
+    Save output data
+    Done
+    data load time: 848ms
+    total execution time: 6161ms
+    ):
+ * CMake update:
+    https://stackoverflow.com/questions/1620918/cmake-and-libpthread 
+ * mmap():
+    https://stackoverflow.com/questions/45972/mmap-vs-reading-blocks
+ * push_back() vs. emplace_back():
+    https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back
+    https://www.geeksforgeeks.org/push_back-vs-emplace_back-in-cpp-stl-vectors/
+ * 
+ * 
+ */
