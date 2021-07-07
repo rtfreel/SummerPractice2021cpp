@@ -68,6 +68,7 @@ int main() {
 
         //unmapping file
         munmap(data, f_size);
+        delete [] thread_pool;
 
         cout<<"Done"<<endl;
     }catch (const exception& e){
@@ -106,12 +107,4 @@ int main() {
     Done
     data load time: 0ms
     total execution time: 1717ms
-
- * CMake update:
-    https://stackoverflow.com/questions/1620918/cmake-and-libpthread 
- * mmap():
-    https://stackoverflow.com/questions/45972/mmap-vs-reading-blocks
- * push_back() vs. emplace_back():
-    https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back
-    https://www.geeksforgeeks.org/push_back-vs-emplace_back-in-cpp-stl-vectors/
  */
