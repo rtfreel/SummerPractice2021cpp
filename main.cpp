@@ -9,21 +9,21 @@
 
 #include <sys/mman.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <sstream>
+#include <sys/stat.h>
 
 const size_t NUMBER_OF_THREADS = 4;
 
 using namespace std;
 
-// don't think ternary operator helps, but it looks better for me
+// don't think ternary operator helps, but it looks better to me 
+// (no if statements, as requested :) )
 string process_line(string in_line){
     for(size_t i=0; i<in_line.size(); i++){
-        if (isdigit(in_line[i]))
-            in_line[i] = in_line[i] < 9 ? in_line[i] + 1 : '0';
-        else 
-            in_line[i] = isupper(in_line[i]) ? tolower(in_line[i]) : toupper(in_line[i]);
+        in_line[i] = isdigit(in_line[i])  ?
+                    (in_line[i] < '0' + 9 ? in_line[i] + 1      : '0') :
+                    (isupper(in_line[i])  ? tolower(in_line[i]) : toupper(in_line[i]));
     }
     return in_line;
 }
@@ -31,7 +31,7 @@ string process_line(string in_line){
 // data for one thread is now in a single chunk
 void process_thread(vector<string>& lines, size_t offset){
     size_t end = lines.size(),
-        chunk = end / NUMBER_OF_THREADS, 
+        chunk = end / NUMBER_OF_THREADS, //lines for thread
         cur = offset * chunk;
     if(offset < NUMBER_OF_THREADS) 
         end = cur + chunk;
@@ -46,41 +46,43 @@ int main() {
     chrono::steady_clock::time_point data_load;
     try{
         cout<<"Load input data"<<endl;
-        ifstream in_file("../input.data");
+        // ifstream in_file("../input.data");
 
-        if(!in_file.is_open()){
-            cout<<"Fail to open file!"<<endl;
-            return 0;
-        }
+        // if(!in_file.is_open()){
+        //     cout<<"Fail to open file!"<<endl;
+        //     return 0;
+        // }
 
-        vector<string> lines;
-        string buffer;
-        while(in_file >> buffer){
-            lines.push_back(buffer+"\n");
-        }
-        in_file.close();
-
-        // int fd = open("../input.data", O_RDONLY, 0);
-        // struct stat st;
-        // fstat(fd, &st);
-        // unsigned char* data = (unsigned char*)mmap(nullptr, st.st_size,
-        //     PROT_READ,
-        //     MAP_PRIVATE,
-        //     fd, 0);
         // vector<string> lines;
         // string buffer;
-        // while(stream >> buffer){
-        //     lines.push_back(buffer+"\n");
+        // while(in_file >> buffer){
+        //     lines.emplace_back(buffer+"\n");
         // }
-        // munmap(carr, st.st_size);
-        // close(fd);
+        // in_file.close();
+
+        int fd = open("../input.data", O_RDONLY, 0);
+        struct stat st;
+        fstat(fd, &st);
+        char* data = (char*)mmap(nullptr, st.st_size,
+            PROT_READ,
+            MAP_PRIVATE,
+            fd, 0);
+        string buffer;
+        vector<string> lines;
+        istringstream stream(data);
+        while(stream >> buffer){
+            lines.emplace_back(buffer+"\n");
+        }
+        cout << st.st_size << endl;
+        munmap(data, st.st_size);
+        close(fd);
 
         data_load = std::chrono::steady_clock::now();
 
         cout << "Start " << NUMBER_OF_THREADS << " threads" << endl;
         vector<thread> thread_pool;
         for(size_t i=0; i<NUMBER_OF_THREADS; i++){
-            // thread *th = new thread(process_thread, i);
+            // thread th(process_thread, ref(lines), i);
             // thread_pool.push_back(th);
             thread_pool.emplace_back(process_thread, ref(lines), i);
         }
