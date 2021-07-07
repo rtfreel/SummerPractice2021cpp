@@ -17,27 +17,22 @@ const size_t NUMBER_OF_THREADS = 4;
 
 using namespace std;
 
-// don't think ternary operator helps, but it looks better to me 
-// (no if statements, as requested :) )
-string process_line(string in_line){
-    for(size_t i=0; i<in_line.size(); i++){
-        in_line[i] = isdigit(in_line[i])  ?
-                    (in_line[i] < '0' + 9 ? in_line[i] + 1      : '0') :
-                    (isupper(in_line[i])  ? tolower(in_line[i]) : toupper(in_line[i]));
-    }
-    return in_line;
-}
-
+// process_thread now modifies every character
+// one by one in memory
 // data for one thread is now in a single chunk
-void process_thread(vector<string>& lines, size_t offset){
-    size_t end = lines.size(),
-        chunk = end / NUMBER_OF_THREADS, //lines for thread
-        cur = offset * chunk;
+void process_thread(char* begin, size_t total, size_t offset){
+    size_t chunk = total / NUMBER_OF_THREADS;
+    char *end = begin + total,
+        *cur = begin + (offset * chunk);
     if(offset < NUMBER_OF_THREADS) 
         end = cur + chunk;
 
     for(; cur < end; cur++){
-        lines[cur] = process_line(lines[cur]);
+        //process every character one by one
+        //got rid of if statements (not sure if it helps)
+        *cur = isdigit(*cur) ?
+            (*cur < '0' + 9 ? *cur + 1      : '0') :
+            (isupper(*cur)  ? tolower(*cur) : toupper(*cur));
     }
 }
 
@@ -46,36 +41,16 @@ int main() {
     chrono::steady_clock::time_point data_load;
     try{
         cout<<"Load input data"<<endl;
-        // ifstream in_file("../input.data");
 
-        // if(!in_file.is_open()){
-        //     cout<<"Fail to open file!"<<endl;
-        //     return 0;
-        // }
-
-        // vector<string> lines;
-        // string buffer;
-        // while(in_file >> buffer){
-        //     lines.emplace_back(buffer+"\n");
-        // }
-        // in_file.close();
-
+        //got rid of vector of lines and mapped file into memory
         int fd = open("../input.data", O_RDONLY, 0);
         struct stat st;
         fstat(fd, &st);
-        char* data = (char*)mmap(nullptr, st.st_size,
-            PROT_READ,
+        size_t f_size = st.st_size;
+        char* data = (char*)mmap(nullptr, f_size,
+            PROT_READ|PROT_WRITE,
             MAP_PRIVATE,
             fd, 0);
-        string buffer;
-        vector<string> lines;
-        istringstream stream(data);
-        while(stream >> buffer){
-            lines.emplace_back(buffer+"\n");
-        }
-        cout << st.st_size << endl;
-        munmap(data, st.st_size);
-        close(fd);
 
         data_load = std::chrono::steady_clock::now();
 
@@ -84,7 +59,7 @@ int main() {
         for(size_t i=0; i<NUMBER_OF_THREADS; i++){
             // thread th(process_thread, ref(lines), i);
             // thread_pool.push_back(th);
-            thread_pool.emplace_back(process_thread, ref(lines), i);
+            thread_pool.emplace_back(process_thread, data, f_size, i);
         }
 
         cout<<"Wait for finish"<<endl;
@@ -92,12 +67,14 @@ int main() {
             th.join();
         }
 
+        //write to file directly from memory
         cout<<"Save output data"<<endl;
         ofstream out_file("../output_cpp.data");
-        for(auto &line : lines){
-            out_file.write(line.c_str(), line.size());
-        }
+        out_file.write(data, f_size);
         out_file.close();
+
+        //unmapping
+        munmap(data, f_size);
 
         cout<<"Done"<<endl;
     }catch (const exception& e){
@@ -125,9 +102,9 @@ int main() {
     Wait for finish
     Save output data
     Done
-    data load time: 848ms
-    total execution time: 6161ms
-    ):
+    data load time: 0ms
+    total execution time: 2416ms
+    (:
  * CMake update:
     https://stackoverflow.com/questions/1620918/cmake-and-libpthread 
  * mmap():
