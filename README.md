@@ -62,3 +62,37 @@ You may probably need pthread library to be included
     
 * Try to map file in memory (linux: mmap() windows: https://docs.microsoft.com/en-us/windows/win32/memory/file-mapping)
 
+##What did I do:
+* Modified CMakeList.txt to run program (Lubuntu 20.04);
+* Modified process_line algorithm and combined it with process_thread to edit "character by character" instead of "line by line";
+* Mapped file into memory;
+* Modified process_thread algorithm to work with large chunk of memory instead of vector of lines;
+* Got rid of unnesessary "includes", such as vector and string;
+
+##Results:
+* First version:
+    Load input data
+    Start 4 threads
+    Wait for finish
+    Save output data
+    Done
+    data load time: 821ms
+    total execution time: 6631ms
+* Final version:
+    Load input data
+    Start 4 threads
+    Wait for finish
+    Save output data
+    Done
+    data load time: 0ms
+    total execution time: 2143ms
+    (:
+* Final version (8 threads):
+    Load input data
+    Start 8 threads
+    Wait for finish
+    Save output data
+    Done
+    data load time: 0ms
+    total execution time: 1717ms
+    
