@@ -1,16 +1,10 @@
 #include <iostream>
-#include <string>
-#include <vector>
 #include <thread>
 #include <fstream>
-#include <algorithm>
 #include <chrono>
-#include <pthread.h>
 
 #include <sys/mman.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <sstream>
 #include <sys/stat.h>
 
 const size_t NUMBER_OF_THREADS = 4;
@@ -27,8 +21,8 @@ void process_thread(char* begin, size_t total, size_t offset){
     if(offset < NUMBER_OF_THREADS) 
         end = cur + chunk;
 
+    //process every character one by one
     for(; cur < end; cur++){
-        //process every character one by one
         //got rid of if statements (not sure if it helps)
         *cur = isdigit(*cur) ?
             (*cur < '0' + 9 ? *cur + 1      : '0') :
@@ -55,16 +49,15 @@ int main() {
         data_load = std::chrono::steady_clock::now();
 
         cout << "Start " << NUMBER_OF_THREADS << " threads" << endl;
-        vector<thread> thread_pool;
+        //used dynamic array instead of vector
+        thread *thread_pool = new thread[NUMBER_OF_THREADS];
         for(size_t i=0; i<NUMBER_OF_THREADS; i++){
-            // thread th(process_thread, ref(lines), i);
-            // thread_pool.push_back(th);
-            thread_pool.emplace_back(process_thread, data, f_size, i);
+            thread_pool[i] = thread(process_thread, data, f_size, i);
         }
 
         cout<<"Wait for finish"<<endl;
-        for(auto& th : thread_pool){
-            th.join();
+        for(size_t i=0; i<NUMBER_OF_THREADS; i++){
+            thread_pool[i].join();
         }
 
         //write to file directly from memory
@@ -73,7 +66,7 @@ int main() {
         out_file.write(data, f_size);
         out_file.close();
 
-        //unmapping
+        //unmapping file
         munmap(data, f_size);
 
         cout<<"Done"<<endl;
@@ -103,8 +96,17 @@ int main() {
     Save output data
     Done
     data load time: 0ms
-    total execution time: 2416ms
+    total execution time: 2143ms
     (:
+ * Result (8 threads):
+    Load input data
+    Start 8 threads
+    Wait for finish
+    Save output data
+    Done
+    data load time: 0ms
+    total execution time: 1717ms
+
  * CMake update:
     https://stackoverflow.com/questions/1620918/cmake-and-libpthread 
  * mmap():
@@ -112,6 +114,4 @@ int main() {
  * push_back() vs. emplace_back():
     https://stackoverflow.com/questions/4303513/push-back-vs-emplace-back
     https://www.geeksforgeeks.org/push_back-vs-emplace_back-in-cpp-stl-vectors/
- * 
- * 
  */
