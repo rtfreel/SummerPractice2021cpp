@@ -68,3 +68,31 @@ You may probably need pthread library to be included
 * Mapped file into memory;
 * Modified process_thread algorithm to work with large chunk of memory instead of vector of lines;
 * Got rid of unnesessary "includes", such as vector and string;
+
+##Results:
+* First version:
+    Load input data
+    Start 4 threads
+    Wait for finish
+    Save output data
+    Done
+    data load time: 821ms
+    total execution time: 6631ms
+* Final version:
+    Load input data
+    Start 4 threads
+    Wait for finish
+    Save output data
+    Done
+    data load time: 0ms
+    total execution time: 2143ms
+    (:
+* Final version (8 threads):
+    Load input data
+    Start 8 threads
+    Wait for finish
+    Save output data
+    Done
+    data load time: 0ms
+    total execution time: 1717ms
+    
